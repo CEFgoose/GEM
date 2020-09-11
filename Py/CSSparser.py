@@ -11,7 +11,6 @@ FINDUSERNODECOLOR = re.compile('(?:|)USERNODECOLOR(?:|\W)')
 FINDUSERNODESHAPE = re.compile('(?:|)USERNODESHAPE(?:|\W)')
 FINDUSERWAYWIDTH = re.compile('(?:|)USERWAYWIDTH(?:|\W)')
 FINDUSERWAYCOLOR = re.compile('(?:|)USERWAYCOLOR(?:|\W)')
-
 FINDNOTUPNODESIZE = re.compile('(?:|)NOTUPNODESIZE(?:|\W)')
 FINDNOTUPNODECOLOR = re.compile('(?:|)NOTUPNODECOLOR(?:|\W)')
 FINDNOTUPNODESHAPE = re.compile('(?:|)NOTUPNODESHAPE(?:|\W)')

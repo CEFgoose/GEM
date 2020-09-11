@@ -82,3 +82,75 @@ node.USERNAME{
 }"""
 
 
+TOGGLEDUSERBLOCK="""
+/* USER SEARCH SETTINGS */
+setting::user_USERNAME {
+            type:boolean;
+            label:tr("Turn User USERID On/Off");
+            default:true;
+            }
+/* USER SEARCH SETUP */
+
+
+*[osm_user_name() == "USERID"][setting("user_USERNAME")] {
+  set .USERNAME;
+}
+
+
+
+/*USER WAY STYLE*/
+way.USERNAME{
+  z-index: -10;
+  casing-color: USERWAYCOLOR;
+  casing-width: USERWAYWIDTH;
+  casing-opacity: 0.6;
+
+}
+
+/*USER NODE STYLE*/
+node.USERNAME{
+  symbol-size: USERNODESIZE;
+  symbol-shape: USERNODESHAPE;
+  symbol-stroke-color: USERNODECOLOR;
+  symbol-stroke-width: 3px;
+  symbol-fill-opacity: 0.5;
+  z-index: -5;
+}
+"""
+
+TIMESEARCHBLOCK= """
+/* USER SEARCH SETTINGS */
+setting::user_USERID {
+            type:boolean;
+            label:tr("Turn User USERNAME On/Off");
+            default:true;
+            }
+
+*[osm_user_name() == "USERID"][eval(JOSM_search("timestamp:SEARCHTIME"))] {
+  casing-width: USERWAYWIDTH;
+  casing-color: USERWAYCOLOR;
+  symbol-size: USERNODESIZE;
+  symbol-shape: USERNODESHAPE;
+  symbol-stroke-color: USERNODECOLOR;
+  symbol-stroke-width: 3px;
+}
+"""
+
+TOGGLEDTIMESEARCHBLOCK= """
+/* USER SEARCH SETTINGS */
+setting::user_USERNAME {
+            type:boolean;
+            label:tr("Turn User USERID On/Off");
+            default:true;
+            }
+
+*[osm_user_name() == "USERID"][eval(JOSM_search("timestamp:SEARCHTIME"))] {
+  casing-width: USERWAYWIDTH;
+  casing-color: USERWAYCOLOR;
+  symbol-size: USERNODESIZE;
+  symbol-shape: USERNODESHAPE;
+  symbol-stroke-color: USERNODECOLOR;
+  symbol-stroke-width: 3px;
+}
+"""
+

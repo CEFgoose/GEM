@@ -1,30 +1,31 @@
 #!/usr/bin/env python
-import argparse
-import json
-import requests
-import urllib
-import httpbin
-import github
-import tempCSS
-#import GITSTUFF
-from github import Github
 import os
 import sys
+from os import chdir
+from os.path import join
+import argparse
+import json
+import tempCSS
+import subprocess
 import logging
 import re
 from enum import Enum, auto
+from datetime import datetime
+from PyQt5.QtCore import QDate
 import PyQt5
 from PyQt5 import QtGui, QtCore, QtWidgets
-from PyQt5.QtCore import QAbstractTableModel, Qt
+from PyQt5.QtCore import QAbstractTableModel, Qt, QSize
 from PyQt5.QtGui import QColor, QIcon
 from PyQt5.QtWidgets import (
     QMainWindow,
     QLabel,
-     QWidget,
+    QWidget,
     QStatusBar,
     QMenuBar,
     QMenu,
     QAction,
+    QRadioButton,
+    QCalendarWidget
 )
 from PyQt5.QtWidgets import QPushButton, QMessageBox, QTabWidget
 
@@ -40,9 +41,9 @@ __email__ = "chris.gousset@kaart.com"
 __status__ = "Development"
 
 # ###### DEBUG STUFF ###### #
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
+##logging.basicConfig(level=logging.DEBUG)
+##logger = logging.getLogger(__name__)
+##
 
 # ###### RESOURCE PATH TO IMAGE FILES IN COMPILED APP ###### #
 def resource_path(relative_path):
@@ -50,13 +51,10 @@ def resource_path(relative_path):
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
-    except Exception as e:
-        logger.exception(e)
+    except Exception:
         base_path = os.path.abspath(".")
 
     return os.path.join(base_path, relative_path)
-
-
 # ###### IMPORT PARSER STUFF ###### #
 
 class MapCSSParseExceptionType(Enum):
@@ -213,7 +211,7 @@ class EDITORINFO(object):
 class MAINWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
-        self.setGeometry(720, 300, 680, 500)
+        self.setGeometry(720, 300, 700, 640)
         self.setWindowTitle("GEM - GUI Editor for Mapcss")
         self.MWHOME(self)
         self.output_file_dir = os.path.expanduser("~/Documents")
@@ -221,7 +219,12 @@ class MAINWindow(QMainWindow):
     def MWHOME(self, MAINWindow):
         self.TITLE = ""
         self.ADMINPASS = "**********"
+        self.ISOLATEUSERON = False
+        self.TIMECHECKON = False
         self.repoGO = False
+        self.GOREMOVEALL = False
+        self.CALENDAROPEN = False
+        self.SEARCHDATES = ""
         self.GOREMOVEALL = False
         self.FINSHEDUSERBLOCK = ""
         self.BLOCK = ""
@@ -249,12 +252,7 @@ class MAINWindow(QMainWindow):
         self.TEMPUSERS = {}
         for j in range(100):
             self.TEMPUSERS[str(j)] = 0
-
-        self.GUMTEMPUSERS = {}
-        for j in range(100):
-            self.GUMTEMPUSERS[str(j)] = 0
         self.ADDUSERS = []
-        self.GUMADDUSERS = []
         self.filters = ""
         self.select_filters = "MAPCSS (*.mapcss)"
         self.directory = os.getcwd()
@@ -263,65 +261,121 @@ class MAINWindow(QMainWindow):
         self.TEMPLINECOLORTEXT = ""
         self.TEMPNODECOLORTEXT = ""
         self.GOEDIT = False
+
+
+##        self.CIRCLE=("/Users/imac25/Desktop/bitmaps/circle.png")
+##        self.SQUARE=("/Users/imac25/Desktop/bitmaps/square.png")
+##        self.TRIANGLE =("/Users/imac25/Desktop/bitmaps/triangle.png")
+##        self.PENTAGON=("/Users/imac25/Desktop/bitmaps/pentagon.png")
+##        self.HEXAGON =( "/Users/imac25/Desktop/bitmaps/hexagon.png")
+##        self.HEPTAGON=("/Users/imac25/Desktop/bitmaps/heptagon.png")
+##        self.OCTAGON=("/Users/imac25/Desktop/bitmaps/octagon.png")
+##        self.NONAGON =("/Users/imac25/Desktop/bitmaps/nonagon.png")
+##        self.DECAGON=("/Users/imac25/Desktop/bitmaps/decagon.png")
+##        self.KAARTICON=("/Users/imac25/Desktop/bitmaps/Kaart.png")
+##        self.GEMICON=("/Users/imac25/Desktop/bitmaps/GEM3.png")         
+        self.CIRCLE = resource_path('circle.png')
+        self.SQUARE = resource_path('square.png')
+        self.TRIANGLE = resource_path('triangle.png')
+        self.PENTAGON = resource_path('pentagon.png')
+        self.HEXAGON = resource_path('hexagon.png')
+        self.HEPTAGON = resource_path('heptagon.png')
+        self.OCTAGON = resource_path('octagon.png')
+        self.NONAGON = resource_path('nonagon.png')
+        self.DECAGON = resource_path('decagon.png')
+        self.KAARTICON = resource_path('Kaart.png')
+        self.GEMICON = resource_path('GEM3.png')
+
+
+        
         self.TABS = QTabWidget(self)
-        self.TABS.resize(670, 460)
-        self.TABS.move(5, 25)
+        self.TABS.resize(690, 580)
+        self.TABS.move(5, 55)
         self.TAB1 = QWidget()
         self.TAB2 = QWidget()
         self.TABS.addTab(self.TAB1, "GEM")
         self.PULLUSER = ""
+        
+ # ######## LINK BUTTONS ####### #
+
+        self.KAARTBUTTON = QPushButton(self)
+        kaart  = QtGui.QIcon(self.KAARTICON)
+        self.KAARTBUTTON.setIcon(kaart)
+        self.KAARTBUTTON.resize(60, 60)
+        self.KAARTBUTTON.move(0, 0)
+        size = QSize(40, 40) 
+        self.KAARTBUTTON.setIconSize(size) 
+        self.KAARTBUTTON.clicked.connect(self.KAARTBUTTON_clicked)
+
+        self.GEMBUTTON = QPushButton(self)
+        gem  = QtGui.QIcon(self.GEMICON)
+        self.GEMBUTTON.setIcon(gem)
+        self.GEMBUTTON.resize(60, 60)
+        self.GEMBUTTON.move(55, 0)
+        size = QSize(40, 40) 
+        self.GEMBUTTON.setIconSize(size) 
+        self.GEMBUTTON.clicked.connect(self.GEMBUTTON_clicked)        
         # ###############################TABLE BUTTONS############################## #
 
         self.TABLE = QtWidgets.QTableView(self.TAB1)
-        self.TABLE.resize(400, 330)
-        self.TABLE.move(255, 30)
+        self.TABLE.resize(400, 470)
+        self.TABLE.move(255, 20)
         self.TABLE.clicked.connect(self.SETNR)
 
         self.REMOVE = QtWidgets.QPushButton(self.TAB1)
         self.REMOVE.setText("REMOVE")
         self.REMOVE.resize(110, 25)
-        self.REMOVE.move(250, 367)
+        self.REMOVE.move(250, 490)
         self.REMOVE.clicked.connect(self.REMOVE_clicked)
 
         self.REMOVEALL = QPushButton(self.TAB1)
         self.REMOVEALL.setText("REMOVE ALL")
         self.REMOVEALL.resize(110, 25)
-        self.REMOVEALL.move(250, 392)
+        self.REMOVEALL.move(250, 515)
         self.REMOVEALL.clicked.connect(self.REMOVEALL_clicked)
 
         self.EXPORT = QPushButton(self.TAB1)
         self.EXPORT.setText("EXPORT")
         self.EXPORT.resize(110, 25)
-        self.EXPORT.move(350, 392)
+        self.EXPORT.move(350, 515)
         self.EXPORT.clicked.connect(self.EXPORT_clicked)
 
         self.IMPORT = QPushButton(self.TAB1)
         self.IMPORT.setText("IMPORT")
         self.IMPORT.resize(110, 25)
-        self.IMPORT.move(350, 367)
+        self.IMPORT.move(350, 490)
         self.IMPORT.clicked.connect(self.IMPORTGO)
 
         self.RESTACK = QPushButton(self.TAB1)
         self.RESTACK.setText("RESTACK")
         self.RESTACK.resize(110, 25)
-        self.RESTACK.move(550, 367)
+        self.RESTACK.move(550, 490)
         self.RESTACK.clicked.connect(self.RESTACK_clicked)
+
+        self.ISOLATE = QPushButton(self.TAB1)
+        self.ISOLATE.setText("ISOLATE")
+        self.ISOLATE.resize(110, 25)
+        self.ISOLATE.move(550, 515)
+        self.ISOLATE.clicked.connect(self.ISOLATE_clicked)
+
 
         self.MOVEUP = QPushButton(self.TAB1)
         self.MOVEUP.setText("MOVE UP")
         self.MOVEUP.resize(110, 25)
-        self.MOVEUP.move(450, 367)
+        self.MOVEUP.move(450, 490)
         self.MOVEUP.clicked.connect(self.MOVEUP_clicked)
 
         self.MOVEDOWN = QPushButton(self.TAB1)
         self.MOVEDOWN.setText("MOVE DOWN")
         self.MOVEDOWN.resize(110, 25)
-        self.MOVEDOWN.move(450, 392)
+        self.MOVEDOWN.move(450, 515)
         self.MOVEDOWN.clicked.connect(self.MOVEDOWN_clicked)
+
+
         # ##############################TEAM SETTINGS######################## #
         self.groupBox = QtWidgets.QGroupBox(self.TAB1)
 
-        self.groupBox.setGeometry(QtCore.QRect(5, 30, 245, 40))
+        self.groupBox.setGeometry(QtCore.QRect(5, 20, 245, 40))
 
         self.TEAMNAMELABEL = QtWidgets.QLabel(self.groupBox)
         self.TEAMNAMELABEL.setText("Team Name")
@@ -333,7 +387,7 @@ class MAINWindow(QMainWindow):
         self.TEAMNAME.move(105, 8)
         # ##############################HIGHLIGHT SETTINGS################### #
         self.groupBox3 = QtWidgets.QGroupBox(self.TAB1)
-        self.groupBox3.setGeometry(QtCore.QRect(5, 75, 245, 120))
+        self.groupBox3.setGeometry(QtCore.QRect(5, 65, 245, 120))
 
         self.NOTUPLOADEDLABEL = QtWidgets.QLabel(self.groupBox3)
         self.NOTUPLOADEDLABEL.setText("Highlight non-uploaded additions")
@@ -385,33 +439,25 @@ class MAINWindow(QMainWindow):
         self.TEAMICONSIZESPIN.move(200, 60)
 
         self.ICONSHAPELABEL = QtWidgets.QLabel(self.groupBox3)
-        self.ICONSHAPELABEL.setText("Node Shape  -")
+        self.ICONSHAPELABEL.setText("Node Shape:")
         self.ICONSHAPELABEL.resize(250, 20)
         self.ICONSHAPELABEL.move(10, 84)
 
-        self.TEAMICONSHAPEBOX = QtWidgets.QComboBox(self.groupBox3)
-        self.TEAMICONSHAPEBOX.setEnabled(True)
+        self.TEAMNODESHAPEICON = QtWidgets.QPushButton(self.groupBox3)
+        self.TEAMNODESHAPEICON.move(90, 80)
+        self.TEAMNODESHAPEICON.resize(35, 30)
 
-        self.TEAMICONSHAPEBOX.blockSignals(True)
-        self.TEAMICONSHAPEBOX.resize(138, 20)
-        self.TEAMICONSHAPEBOX.addItem("Circle")
-        self.TEAMICONSHAPEBOX.addItem("Triangle")
-        self.TEAMICONSHAPEBOX.addItem("Square")
-        self.TEAMICONSHAPEBOX.addItem("Pentagon")
-        self.TEAMICONSHAPEBOX.addItem("Hexagon")
-        self.TEAMICONSHAPEBOX.addItem("Heptagon")
-        self.TEAMICONSHAPEBOX.addItem("Octagon")
-        self.TEAMICONSHAPEBOX.addItem("Nonagon")
-        self.TEAMICONSHAPEBOX.addItem("Decagon")
-        self.TEAMICONSHAPEBOX.setCurrentIndex(-1)
-        self.TEAMICONSHAPEBOX.blockSignals(False)
-        self.TEAMICONSHAPEBOX.activated[str].connect(self.TEAMSHAPESELECT)
-        self.TEAMICONSHAPEBOX.move(105, 85)
 
+        self.TEAMICONSHAPEBOX = QtWidgets.QPushButton(self.groupBox3)
+        self.TEAMICONSHAPEBOX.resize(130, 25)
+        self.TEAMICONSHAPEBOX.setText("SELECT SHAPE")
+        self.TEAMICONSHAPEBOX.move(115
+                                   , 80)
+        self.TEAMICONSHAPEBOX.clicked.connect(lambda: self.EDITORSHAPESELECT("TEAM"))
         # ##############################EDITOR SETTINGS###################### #
 
         self.groupBox2 = QtWidgets.QGroupBox(self.TAB1)
-        self.groupBox2.setGeometry(QtCore.QRect(5, 200, 245, 220))
+        self.groupBox2.setGeometry(QtCore.QRect(5, 190, 245, 220))
 
         self.EDITSETTINGSLABEL = QtWidgets.QLabel(self.groupBox2)
         self.EDITSETTINGSLABEL.setText("Editor Settings:")
@@ -507,40 +553,84 @@ class MAINWindow(QMainWindow):
         self.TOGGLECHECK.move(220, 165)
 
         self.EDITORICONSHAPELABEL = QtWidgets.QLabel(self.groupBox2)
-        self.EDITORICONSHAPELABEL.setText("Node Shape  -")
+        self.EDITORICONSHAPELABEL.setText("Node Shape:")
         self.EDITORICONSHAPELABEL.resize(250, 20)
         self.EDITORICONSHAPELABEL.move(12, 190)
 
-        self.EDITORICONSHAPEBOX = QtWidgets.QComboBox(self.groupBox2)
-        self.EDITORICONSHAPEBOX.setEnabled(True)
+        self.EDITORNODESHAPEICON = QtWidgets.QPushButton(self.groupBox2)
+        self.EDITORNODESHAPEICON.move(90, 185)
+        self.EDITORNODESHAPEICON.resize(35, 30)
 
-        self.EDITORICONSHAPEBOX.blockSignals(True)
+
+        self.EDITORICONSHAPEBOX = QtWidgets.QPushButton(self.groupBox2)
+        self.EDITORICONSHAPEBOX.resize(130, 25)
+        self.EDITORICONSHAPEBOX.setText("SELECT SHAPE")
+        self.EDITORICONSHAPEBOX.move(115, 185)
+        self.EDITORICONSHAPEBOX.clicked.connect(lambda: self.EDITORSHAPESELECT("EDITOR"))
+
+## ################ TIME SEARCH ############### ##
+        self.TIMEBox = QtWidgets.QGroupBox(self.TAB1)
+        self.TIMEBox.setGeometry(QtCore.QRect(5, 415, 245, 128))
+  
+        self.TIMESEARCHLABEL = QtWidgets.QLabel(self.TIMEBox)
+        self.TIMESEARCHLABEL.setText("Time Search:")
+        self.TIMESEARCHLABEL.resize(250, 20)
+        self.TIMESEARCHLABEL.move(12, 5)
         
-        self.EDITORICONSHAPEBOX.resize(135, 20)
-        self.EDITORICONSHAPEBOX.clear()
-        self.EDITORICONSHAPEBOX.addItem("Circle")
-        self.EDITORICONSHAPEBOX.addItem("Triangle")
-        self.EDITORICONSHAPEBOX.addItem("Square")
-        self.EDITORICONSHAPEBOX.addItem("Pentagon")
-        self.EDITORICONSHAPEBOX.addItem("Hexagon")
-        self.EDITORICONSHAPEBOX.addItem("Heptagon")
-        self.EDITORICONSHAPEBOX.addItem("Octagon")
-        self.EDITORICONSHAPEBOX.addItem("Nonagon")
-        self.EDITORICONSHAPEBOX.addItem("Decagon")
-        self.EDITORICONSHAPEBOX.move(105, 190)
-        self.EDITORICONSHAPEBOX.blockSignals(False)
-        self.EDITORICONSHAPEBOX.activated[str].connect(self.EDITORSHAPESELECT)
-        self.EDITORICONSHAPEBOX.setCurrentIndex(-1)
+        self.STARTDATELABEL = QtWidgets.QLabel(self.TIMEBox)
+        self.STARTDATELABEL.setText("Start Date:")
+        self.STARTDATELABEL.resize(250, 20)
+        self.STARTDATELABEL.move(12, 30)
         
-        self.CIRCLE = resource_path("//circle.png")
-        self.SQUARE = resource_path("//square.png")
-        self.TRIANGLE = resource_path("//triangle.png")
-        self.PENTAGON = resource_path("//pentagon.png")
-        self.HEXAGON = resource_path("//hexagon.png")
-        self.HEPTAGON = resource_path("//heptagon.png")
-        self.OCTAGON = resource_path("//octagon.png")
-        self.NONAGON = resource_path("//nonagon.png")
-        self.DECAGON = resource_path("//decagon.png")
+        self.STARTDATE = QtWidgets.QLineEdit(self.TIMEBox)
+        self.STARTDATE.resize(120, 20)
+        self.STARTDATE.setText("")
+        self.STARTDATE.move(95, 30)
+
+        self.STARTDATESELECT =QRadioButton(self.TIMEBox)
+        self.STARTDATESELECT.move(222, 31)
+
+        self.ENDDATELABEL = QtWidgets.QLabel(self.TIMEBox)
+        self.ENDDATELABEL.setText("End Date:")
+        self.ENDDATELABEL.resize(250, 20)
+        self.ENDDATELABEL.move(12, 55)
+        
+        self.ENDDATE = QtWidgets.QLineEdit(self.TIMEBox)
+        self.ENDDATE.resize(120, 20)
+        self.ENDDATE.setText("")
+        self.ENDDATE.move(95, 55)
+
+        self.ENDDATESELECT =QRadioButton(self.TIMEBox)
+        self.ENDDATESELECT.move(222, 56)
+           
+        self.SET = QPushButton(self.TIMEBox)
+        self.SET.setText("SET DATES")
+        self.SET.resize(125, 25)
+        self.SET.move(0,75)
+        self.SET.clicked.connect(self.SETSEARCHDATES)
+        
+        self.RESET = QPushButton(self.TIMEBox)
+        self.RESET.setText("CLEAR DATES")
+        self.RESET.resize(125, 25)
+        self.RESET.move(120, 75)
+        self.RESET.clicked.connect(self.CLEARSEARCHDATES)
+                
+        self.CAL = QPushButton(self.TIMEBox)
+        self.CAL.setText("OPEN CALENDAR")
+        self.CAL.resize(155, 25)
+        self.CAL.move(90, 1)
+        self.CAL.clicked.connect(self.CHOOSEDATE)
+
+
+        self.TIMETOGGLELABEL = QtWidgets.QLabel(self.TIMEBox)
+        self.TIMETOGGLELABEL.setText("Toggle Timestamp Search on/off:")
+        self.TIMETOGGLELABEL.resize(250, 20)
+        self.TIMETOGGLELABEL.move(12, 100)
+
+        self.TIMECHECK =  QtWidgets.QCheckBox(self.TIMEBox)
+        self.TIMECHECK.move(222, 102)
+        self.TIMECHECK.toggled.connect(self.TIMECHECKTOGGLED)
+
 
         self.retranslateUi(MAINWindow)
 
@@ -549,10 +639,10 @@ class MAINWindow(QMainWindow):
     def retranslateUi(self, MAINWindow):
 
         self.GEMheaders = [
-            "NAME",
-            "USER ID",
-            "LINE HIGHLIGHT",
-            "NODE HIGHLIGHT",
+            "NAME ",
+            "UID ",
+            "LINE COLOR",
+            "NODE ",
         ]
         self.rowcount = 50
         self.colcount = 4
@@ -578,11 +668,126 @@ class MAINWindow(QMainWindow):
         return os.path.join(base_path, relative_path)
     # ###### CLOSE EVENT ###### #
     def closeEvent(self, event):
+        self.ISOLATEUSERON = False
+        self.TIMECHECKON = False
+        try:
+            self.EXPORT_clicked()
+        except:
+                pass
         self.setParent(None)
         self.deleteLater()
         self.close()
+# ####### LINK BUTTONS ######## #
+
+    def KAARTBUTTON_clicked(self):
+        url = ("http://kaartgroup.com/")
+        if sys.platform=='win32':
+            os.startfile(url)
+        elif sys.platform=='darwin':
+            subprocess.Popen(['open', url])
+        else:
+            try:
+                subprocess.Popen(['xdg-open', url])
+            except OSError:
+               pass
+
+    def GEMBUTTON_clicked(self):
+        url = ("https://gem.kaart.com/")
+        if sys.platform=='win32':
+            os.startfile(url)
+        elif sys.platform=='darwin':
+            subprocess.Popen(['open', url])
+        else:
+            try:
+                subprocess.Popen(['xdg-open', url])
+            except OSError:
+               pass
+        
+# ######### TIME SEARCH FUNCTIONS ######## #
+    def CHOOSEDATE(self):
+        if self.CALENDAROPEN == False:
+            self.CAL.setText("CLOSE CALANDER")
+            self.calendar = QCalendarWidget(self)
+            self.calendar.move(260, 380)
+            self.calendar.resize(300, 200)
+            self.calendar.setGridVisible(True)
+            self.calendar.show()
+            self.calendar.clicked.connect(self.SETSTARTDATE)
+            self.CALENDAROPEN = True
+            self.TAB1.repaint()
+        else:
+            self.calendar.close()
+            self.CAL.setText("OPEN CALANDER")
+            self.CALENDAROPEN = False
+            self.TAB1.repaint()
+
+
+        
+    def SETSTARTDATE(self,qDate):
+        MONTH = qDate.month()
+        DAY = qDate.day()
+        if MONTH < 10:
+            MONTH = "0%s"%(MONTH)
+        if DAY < 10:
+            DAY = "0%s"%(DAY)
+        if self.STARTDATESELECT.isChecked():
+              self.STARTDATE.setText('{0}-{1}-{2}'.format(qDate.year(), MONTH, DAY))
+              self.STARTDATE.repaint()
+        elif self.ENDDATESELECT.isChecked():
+              self.ENDDATE.setText('{0}-{1}-{2}'.format(qDate.year(), MONTH, DAY))
+              self.ENDDATE.repaint()
+              
+    def SETSEARCHDATES(self):
+        if self.STARTDATE.text()!= "":
+            if self.ENDDATE.text()!= "":
+                self.SEARCHDATES  = ("%s/%s"%(self.STARTDATE.text(),self.ENDDATE.text()))
+            else:
+                self.SEARCHDATES = "%s/"%(self.STARTDATE.text())
+        else:
+            pass
+
+    def CLEARSEARCHDATES(self):
+        self.SEARCHDATES = ""
+        self.STARTDATE.setText("")
+        self.STARTDATE.repaint()
+        self.ENDDATE.setText("")
+        self.ENDDATE.repaint()
+        self.STARTDATESELECT.setChecked(False)
+        self.STARTDATESELECT.repaint()
+        self.ENDDATESELECT.setChecked(False)
+        self.ENDDATESELECT.repaint()
+        
+
+
+
+
+
+        
 
     # ########################   GEM: EDITOR FUNCTIONS   ###################### #
+    def TIMECHECKTOGGLED(self):
+        if self.TIMECHECK.isChecked():
+            self.TIMECHECKON = True
+            self.EXPORT_clicked()
+        else:
+            self.TIMECHECKON = False
+            self.EXPORT_clicked()
+    
+    def ISOLATE_clicked(self):
+       if self.NRSELECT != "":
+           if self.ISOLATEUSERON == True:
+                self.ISOLATEUSERON = False
+                self.SHOWUSER = ""
+                self.ISOLATE.setText("ISOLATE")
+                self.ISOLATE.repaint()
+                self.EXPORT_clicked()
+           else:
+               self.SHOWUSER = self.TEMPUSERS[str(self.NRSELECT)]
+               self.ISOLATEUSERON = True
+               self.ISOLATE.setText("SHOW ALL")
+               self.ISOLATE.repaint()
+               self.EXPORT_clicked()
+
     '''
     RESTACK clears the editor table, creates a temporary dict called restack users, then itterates through
     the tempusers array. Tempusers still contains empty slots where the user may have removed editors from the
@@ -629,22 +834,22 @@ class MAINWindow(QMainWindow):
             if MOVETO != int(-1):
                 if str(MOVETO) in self.TEMPUSERS.keys():
                     if self.TEMPUSERS[str(MOVETO)] == 0:
-                        self.GEMGEMarray[(MOVETO)][0] = self.TEMPUSERS[
+                        self.GEMarray[(MOVETO)][0] = self.TEMPUSERS[
                             str(MOVEFROM)
                         ].NAME
-                        self.GEMGEMarray[(MOVETO)][1] = self.TEMPUSERS[
+                        self.GEMarray[(MOVETO)][1] = self.TEMPUSERS[
                             str(MOVEFROM)
                         ].UID
-                        self.GEMGEMarray[(MOVETO)][2] = self.TEMPUSERS[
+                        self.GEMarray[(MOVETO)][2] = self.TEMPUSERS[
                             str(MOVEFROM)
                         ].LINECOLORUI
-                        self.GEMGEMarray[(MOVETO)][3] = self.TEMPUSERS[
+                        self.GEMarray[(MOVETO)][3] = self.TEMPUSERS[
                             str(MOVEFROM)
                         ].icon
-                        self.GEMGEMarray[(MOVEFROM)][0] = ""
-                        self.GEMGEMarray[(MOVEFROM)][1] = ""
-                        self.GEMGEMarray[(MOVEFROM)][2] = clear
-                        self.GEMGEMarray[(MOVEFROM)][3] = clear
+                        self.GEMarray[(MOVEFROM)][0] = ""
+                        self.GEMarray[(MOVEFROM)][1] = ""
+                        self.GEMarray[(MOVEFROM)][2] = clear
+                        self.GEMarray[(MOVEFROM)][3] = clear
                         self.TEMPUSERS[str(MOVETO)] = self.TEMPUSERS[str(MOVEFROM)]
                         self.TEMPUSERS[str(MOVEFROM)] = 0
                         self.SETNR()
@@ -653,9 +858,9 @@ class MAINWindow(QMainWindow):
                         if str(MOVEFROM) in self.TEMPUSERS.keys():
                             self.MOVETOUSER = self.TEMPUSERS[str(MOVEFROM)]
                             self.MOVEFROMUSER = self.TEMPUSERS[str(MOVETO)]
-                            self.GEMGEMarray[(MOVEFROM)][0] = self.MOVEFROMUSER.NAME
-                            self.GEMGEMarray[(MOVEFROM)][1] = self.MOVEFROMUSER.UID
-                            self.GEMGEMarray[(MOVEFROM)][
+                            self.GEMarray[(MOVEFROM)][0] = self.MOVEFROMUSER.NAME
+                            self.GEMarray[(MOVEFROM)][1] = self.MOVEFROMUSER.UID
+                            self.GEMarray[(MOVEFROM)][
                                 2
                             ] = self.MOVEFROMUSER.LINECOLORUI
                             self.GEMarray[(MOVEFROM)][3] = self.MOVEFROMUSER.icon
@@ -818,18 +1023,20 @@ class MAINWindow(QMainWindow):
                     ECLASS.LINECOLORTEXT = "#b600ff"
                     ECLASS.LINECOLORUI = QColor(ECLASS.LINECOLORTEXT)
 
+
                 if self.TEMPNODECOLORTEXT.strip():
                     ECLASS.NODECOLORTEXT = self.TEMPNODECOLORTEXT
-                    ECLASS.NODECOLORUI = self.TEMPNODECOLORUI
+                    ECLASS.NODECOLORUI = QColor(self.TEMPNODECOLORUI)
                 else:
                     ECLASS.NODECOLORTEXT = "#4648ff"
-                    ECLASS.NODECOLORUI = ECLASS.NODECOLORUI
+                    ECLASS.NODECOLORUI = QColor("#4648ff")
 
                 if self.TEMPEDITORICONSHAPE.strip():
 
                     ECLASS.ICONSHAPE = self.TEMPEDITORICONSHAPE
                 else:
-                    ECLASS.ICONSHAPE = "Circle"
+                    ECLASS.ICONSHAPE = "circle"
+                    
                 ECLASS.LINEWIDTH = str(self.EDITORLINEWIDTHSPIN.value())
                 ECLASS.ICONSIZE = str(self.EDITORNODESIZESPIN.value())
 
@@ -865,12 +1072,21 @@ class MAINWindow(QMainWindow):
                 self.EDITORID.repaint()
                 'add one to the usercount so the next entry will go into the next open line in the table'
                 self.usercount += 1
-                ' clear the colors dosplayed in the editor info entry field'
+                ' clear the colors displayed in the editor info entry field'
                 self.pix.fill(QColor(self.WHITE))
                 self.EDITORNODECOLORICON.setPixmap(self.pix)
                 self.EDITORLINECOLORICON.setPixmap(self.pix)
                 self.EDITORNODECOLORICON.repaint()
                 self.EDITORLINECOLORICON.repaint()
+                shape = QtGui.QIcon("")
+                self.EDITORNODESHAPEICON.setIcon(shape)
+                self.EDITORNODESHAPEICON.repaint()
+                ECLASS=""
+                self.TEMPEDITORICONSHAPE=""
+                self.TEMPLINECOLORTEXT = ""
+                self.TEMPNODECOLORTEXT = ""
+                self.TABLE.resizeColumnsToContents()
+                self.TABLE.resizeRowsToContents()
 # ###### UPDATE ###### #
         '''
         if NRSELECT is not a null value, then we know it is an existing editor being updated.
@@ -886,9 +1102,9 @@ class MAINWindow(QMainWindow):
             if ENAME and EUID.strip():
                 self.TEMPUSERS[str(self.EDITORSELECT)].NAME = ENAME
                 self.TEMPUSERS[str(self.EDITORSELECT)].UID = EUID
-                self.TEMPUSERS[
-                    str(self.EDITORSELECT)
-                ].ICONSHAPE = self.EDITORICONSHAPEBOX.currentText()
+##                self.TEMPUSERS[
+##                    str(self.EDITORSELECT)
+##                ].ICONSHAPE = self.EDITORICONSHAPEBOX.currentText()
                 self.TEMPUSERS[str(self.EDITORSELECT)].LINEWIDTH = str(
                     self.EDITORLINEWIDTHSPIN.value()
                 )
@@ -921,74 +1137,49 @@ class MAINWindow(QMainWindow):
                 self.EDITORSELECT = None
                 self.ADD.setText("ADD")
                 self.pix.fill(QColor(self.WHITE))
+                shape = QtGui.QIcon("")
+                self.EDITORNODESHAPEICON.setIcon(shape)
+                self.EDITORNODESHAPEICON.repaint()
                 self.EDITORNODECOLORICON.setPixmap(self.pix)
                 self.EDITORLINECOLORICON.setPixmap(self.pix)
                 self.EDITORLINECOLORICON.repaint()
                 self.EDITORNODECOLORICON.repaint()
+                self.TABLE.resizeColumnsToContents()
+                self.TABLE.resizeRowsToContents()
                 self.NRSELECT = ""
-
-    def GETTEAMSHAPETEXT(self):
-        '''
-        on import, The GETTEAMSHAPETEST sets the team node shape (unuploaded) QComboBox to the corresponding value
-        '''
-        if self.TEAMICONSHAPE == "Circle":
-            self.TEAMICONSHAPEBOX.setCurrentIndex(0)
-            self.TEAMICONSHAPEBOX.repaint()
-        if self.TEAMICONSHAPE == "Triangle":
-            self.TEAMICONSHAPEBOX.setCurrentIndex(1)
-            self.TEAMICONSHAPEBOX.repaint()
-        if self.TEAMICONSHAPE == "Square":
-            self.TEAMICONSHAPEBOX.setCurrentIndex(2)
-            self.TEAMICONSHAPEBOX.repaint()
-        if self.TEAMICONSHAPE == "Pentagon":
-            self.TEAMICONSHAPEBOX.setCurrentIndex(3)
-            self.TEAMICONSHAPEBOX.repaint()
-        if self.TEAMICONSHAPE == "Hexagon":
-            self.TEAMICONSHAPEBOX.setCurrentIndex(4)
-            self.TEAMICONSHAPEBOX.repaint()
-        if self.TEAMICONSHAPE == "Heptagon":
-            self.TEAMICONSHAPEBOX.setCurrentIndex(5)
-            self.TEAMICONSHAPEBOX.repaint()
-        if self.TEAMICONSHAPE == "Octagon":
-            self.TEAMICONSHAPEBOX.setCurrentIndex(6)
-            self.TEAMICONSHAPEBOX.repaint()
-        if self.TEAMICONSHAPE == "Nonagon":
-            self.TEAMICONSHAPEBOX.setCurrentIndex(7)
-            self.TEAMICONSHAPEBOX.repaint()
-        if self.TEAMICONSHAPE == "Decagon":
-            self.TEAMICONSHAPEBOX.setCurrentIndex(8)
-            self.TEAMICONSHAPEBOX.repaint()
+                self.EXPORT_clicked()
+   
 
     def GETEDITORSHAPETEXT(self):
         '''
         on EDIT, The GETEDITORSHAPETEXT finds the node highlight shape for the selected editor in the table
         and sets the QComboBox in the editor info field to the corresponding value
         '''       
-        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "Circle":
+        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "circle":
             self.EDITORICONSHAPEBOX.setCurrentIndex(0)
             self.EDITORICONSHAPEBOX.repaint()
-        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "Triangle":
+        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "triangle":
             self.EDITORICONSHAPEBOX.setCurrentIndex(1)
             self.EDITORICONSHAPEBOX.repaint()
-        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "Square":
+        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "square":
             self.EDITORICONSHAPEBOX.setCurrentIndex(2)
             self.EDITORICONSHAPEBOX.repaint()
-        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "Pentagon":
+        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "pentagon":
             self.EDITORICONSHAPEBOX.setCurrentIndex(3)
             self.EDITORICONSHAPEBOX.repaint()
-        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "Hexagon":
+        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "hexagon":
             self.EDITORICONSHAPEBOX.setCurrentIndex(4)
             self.EDITORICONSHAPEBOX.repaint()
-        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "Heptagon":
+        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "heptagon":
             self.EDITORICONSHAPEBOX.setCurrentIndex(5)
             self.EDITORICONSHAPEBOX.repaint()
-        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "Octagon":
+        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "octagon":
             self.EDITORICONSHAPEBOX.setCurrentIndex(6)
             self.EDITORICONSHAPEBOX.repaint()
-        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "Nonagon":
+        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "nonagon":
             self.EDITORICONSHAPEBOX.setCurrentIndex(7)
             self.EDITORICONSHAPEBOX.repaint()
-        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "Decagon":
+        if self.TEMPUSERS[str(self.NRSELECT)].ICONSHAPE == "decagon":
             self.EDITORICONSHAPEBOX.setCurrentIndex(8)
             self.EDITORICONSHAPEBOX.repaint()
 
@@ -1001,12 +1192,22 @@ class MAINWindow(QMainWindow):
     def TEAMSHAPESELECT(self):
         self.TEAMICONSHAPE = self.TEAMICONSHAPEBOX.currentText()
 
-    def EDITORSHAPESELECT(self):
-        self.TEMPEDITORICONSHAPE = self.EDITORICONSHAPEBOX.currentText()
+    def EDITORSHAPESELECT(self,SELECT):
+        self.dialog =  EDITORiconWindow(SELECT)
+        self.dialog.show()
+        
     # ############################   EXPORT BLOCK   ############################ #
 
     
     def EXPORT_clicked(self):
+      if self.TEAMNAME.text() != "":
+        self.RESTACK_clicked()
+        self.ADDUSERS = []
+        if self.ISOLATEUSERON == True:
+            self.ADDUSERS.append(self.SHOWUSER)
+        else:    
+            for i in self.TEMPUSERS.values():
+                self.ADDUSERS.append(i)
         'retrieve a few more values we need from the appropriate entry fields'
         
         self.ICONSIZE = str(self.TEAMICONSIZESPIN.value())
@@ -1034,6 +1235,7 @@ class MAINWindow(QMainWindow):
         FINDNOTUPNODESHAPE = re.compile('(?:|)NOTUPNODESHAPE(?:|\W)')
         FINDNOTUPWAYCOLOR = re.compile('(?:|)NOTUPWAYCOLOR(?:|\W)')
         FINDNOTUPWAYWIDTH = re.compile('(?:|)NOTUPWAYWIDTH(?:|\W)')
+        FINDTIMESEARCH = re.compile('(?:|)SEARCHTIME(?:|\W)')
         FINDTITLE = re.compile('(?:|)TITLE(?:|\W)')
 
         '''
@@ -1041,24 +1243,44 @@ class MAINWindow(QMainWindow):
         using the previously compiled regexes to sub out the placeholder variables in the template css blocks
         with each editor's indivisual settings 
         '''
-        for i in self.ADDUSERS:
-            if self.TOGGLECHECK.isChecked():
-                i.USERBLOCK = re.sub(FINDUSERNAME, i.NAME, tempCSS.TOGGLEDUSERBLOCK)
-            else:
-                i.USERBLOCK = re.sub(FINDUSERNAME, i.NAME, tempCSS.USERBLOCK)
-            i.USERBLOCK= re.sub(FINDUSERID, i.UID, i.USERBLOCK)
-            i.USERBLOCK= re.sub(FINDUSERNAME, i.NAME, i.USERBLOCK)
-            i.USERBLOCK = re.sub(FINDUSERNODESIZE, i.ICONSIZE, i.USERBLOCK)
-            i.USERBLOCK= re.sub(FINDUSERNODECOLOR, i.NODECOLORTEXT, i.USERBLOCK)
-            i.USERBLOCK = re.sub(FINDUSERNODESHAPE, i.ICONSHAPE, i.USERBLOCK)
-            i.USERBLOCK= re.sub(FINDUSERNAME, i.NAME, i.USERBLOCK)
-            i.USERBLOCK = re.sub(FINDUSERWAYWIDTH, i.LINEWIDTH, i.USERBLOCK )
-            i.USERBLOCK  = re.sub(FINDUSERWAYCOLOR, i.LINECOLORTEXT, i.USERBLOCK )
 
-            ' Add the newest fisihed user block to the finished userblock'
+        if self.TIMECHECKON ==True:
+            for i in self.ADDUSERS:
+                if self.TOGGLECHECK.isChecked():
+                    i.USERBLOCK = re.sub(FINDUSERNAME, i.NAME, tempCSS.TOGGLEDTIMESEARCHBLOCK)
+                else:
+                    i.USERBLOCK = re.sub(FINDUSERNAME, i.NAME, tempCSS.TIMESEARCHBLOCK)
+                i.USERBLOCK= re.sub(FINDUSERID, i.UID, i.USERBLOCK)
+                i.USERBLOCK= re.sub(FINDUSERNAME, i.NAME, i.USERBLOCK)
+                i.USERBLOCK = re.sub(FINDUSERNODESIZE, i.ICONSIZE, i.USERBLOCK)
+                i.USERBLOCK= re.sub(FINDUSERNODECOLOR, i.NODECOLORTEXT, i.USERBLOCK)
+                i.USERBLOCK = re.sub(FINDUSERNODESHAPE, i.ICONSHAPE, i.USERBLOCK)
+                i.USERBLOCK= re.sub(FINDUSERNAME, i.NAME, i.USERBLOCK)
+                i.USERBLOCK = re.sub(FINDUSERWAYWIDTH, i.LINEWIDTH, i.USERBLOCK )
+                i.USERBLOCK  = re.sub(FINDUSERWAYCOLOR, i.LINECOLORTEXT, i.USERBLOCK )
+                i.USERBLOCK  = re.sub(FINDTIMESEARCH, self.SEARCHDATES, i.USERBLOCK )
+                self.FINSHEDUSERBLOCK  += str(i.USERBLOCK)
+
+#####FIX TEMPUSEERS INPUT TO EXPORT BY REPLACING WITH ADDUSERS AND ADDING FUNCTION TO UPDATE ADDUSERS AFTER EVERY CHANGE IN DATA
+        else:
+            for i in self.ADDUSERS:
+                if self.TOGGLECHECK.isChecked():
+                    i.USERBLOCK = re.sub(FINDUSERNAME, i.NAME, tempCSS.TOGGLEDUSERBLOCK)
+                else:
+                    i.USERBLOCK = re.sub(FINDUSERNAME, i.NAME, tempCSS.USERBLOCK)
+                i.USERBLOCK= re.sub(FINDUSERID, i.UID, i.USERBLOCK)
+                i.USERBLOCK= re.sub(FINDUSERNAME, i.NAME, i.USERBLOCK)
+                i.USERBLOCK = re.sub(FINDUSERNODESIZE, i.ICONSIZE, i.USERBLOCK)
+                i.USERBLOCK= re.sub(FINDUSERNODECOLOR, i.NODECOLORTEXT, i.USERBLOCK)
+                i.USERBLOCK = re.sub(FINDUSERNODESHAPE, i.ICONSHAPE, i.USERBLOCK)
+                i.USERBLOCK= re.sub(FINDUSERNAME, i.NAME, i.USERBLOCK)
+                i.USERBLOCK = re.sub(FINDUSERWAYWIDTH, i.LINEWIDTH, i.USERBLOCK )
+                i.USERBLOCK  = re.sub(FINDUSERWAYCOLOR, i.LINECOLORTEXT, i.USERBLOCK )
+
+                ' Add the newest fisihed user block to the finished userblock'
             
-            self.FINSHEDUSERBLOCK  += str(i.USERBLOCK)
-            
+                self.FINSHEDUSERBLOCK  += str(i.USERBLOCK)
+                
         'Do the same for the static CSS blocks only once to enter all Team (unuploaded) Highlight settings'
         
         STATICBLOCK = re.sub(FINDNOTUPNODESIZE, self.ICONSIZE, tempCSS.STATICBLOCK)
@@ -1078,10 +1300,13 @@ class MAINWindow(QMainWindow):
         
         'write out the finished MapCSS file to the chosen directory'
         
-        with open(file, 'w+')as CSS:
+        with open(file, 'w')as CSS:
             CSS.writelines (self.BLOCK)
-
-            
+        self.BLOCK = ""
+        STATICBLOCK=""
+        self.FINSHEDUSERBLOCK =""
+        for i in self.ADDUSERS:
+            i.USERBLOCK = ""
 
     ##############################################################################
 
@@ -1108,7 +1333,9 @@ class MAINWindow(QMainWindow):
             self.EDITORNODECOLORICON.repaint()
             self.EDITORLINECOLORICON.repaint()
             self.TEMPEDITORICONSHAPE = ""
-
+            shape = QtGui.QIcon("")
+            self.EDITORNODESHAPEICON.setIcon(shape)
+            self.EDITORNODESHAPEICON.repaint()
         except Exception as e:
             logger.exception(e)
 
@@ -1236,11 +1463,17 @@ class MAINWindow(QMainWindow):
                 self.EDITORID.repaint()
                 self.pix.fill(QColor(self.TEMPUSERS[str(self.NRSELECT)].NODECOLORUI))
                 self.EDITORNODECOLORICON.setPixmap(self.pix)
+
                 self.EDITORNODECOLORICON.repaint()
                 self.pix.fill(QColor(self.TEMPUSERS[str(self.NRSELECT)].LINECOLORUI))
                 self.EDITORLINECOLORICON.setPixmap(self.pix)
                 self.EDITORLINECOLORICON.repaint()
-                self.GETEDITORSHAPETEXT()
+                
+#
+                shape = QtGui.QIcon(self.TEMPUSERS[str(self.NRSELECT)].icon)
+                self.EDITORNODESHAPEICON.setIcon(shape)
+                self.EDITORNODESHAPEICON.repaint()
+                
                 self.EDITORLINEWIDTHSPIN.setValue(
                     int(self.TEMPUSERS[str(self.NRSELECT)].LINEWIDTH)
 
@@ -1332,6 +1565,8 @@ class MAINWindow(QMainWindow):
         for i in WAYSETTINGSBLOCK:
             color = re.findall(r"casing-color:\s*([#A-Za-z0-9]+)\s*;", i)[0]
             width = re.findall(r"casing-width:\s*([0-9px]+)\s*;", i)[0]
+            width = width.strip("px")
+
             for user in re.findall(r"way\.(.*?)\s*[,{]", i):
                 # MAINWindow since this is the current class...
                 key = MAINWindow.get_index_parsed_users(parsed_users, user)
@@ -1366,6 +1601,8 @@ class MAINWindow(QMainWindow):
             shape = re.findall(r"symbol-shape:\s*([#A-Za-z0-9]+)\s*;", i)[0]
             color = re.findall(r"symbol-stroke-color:\s*([#A-Za-z0-9]+)\s*;", i)[0]
             width = re.findall(r"symbol-stroke-width:\s*([0-9px]+)\s*;", i)[0]
+            width = width.strip("px")
+
             for user in re.findall(r"node\.(.*?)\s*[,{]", i):
                 # MAINWindow since this is the current class...
                 key = MAINWindow.get_index_parsed_users(parsed_users, user)
@@ -1422,13 +1659,13 @@ class MAINWindow(QMainWindow):
         self.TEAMLINECOLORUI = QtGui.QColor(self.TEAMLINECOLORTEXT)
         self.TEAMNODECOLORUI = QtGui.QColor(self.TEAMNODECOLORTEXT)
         self.LINEWIDTH = re.findall(
-            r"way:modified.*?casing-width\s?:\s?([0-9px]+)", text_no_newline
+            r"way:modified.*?casing-width\s?:\s?([0-9]+)", text_no_newline
         )
         self.LINEWIDTH = (
             self.LINEWIDTH[0] if isinstance(self.LINEWIDTH, list) else self.LINEWIDTH
         )
         self.ICONSIZE = re.findall(
-            r"node:modified.*?symbol-size:\s?([0-9px]+)", text_no_newline
+            r"node:modified.*?symbol-size:\s?([0-9]+)", text_no_newline
         )
         self.ICONSIZE = (
             self.ICONSIZE[0] if isinstance(self.ICONSIZE, list) else self.ICONSIZE
@@ -1462,11 +1699,17 @@ class MAINWindow(QMainWindow):
             CONSTRUCTOR.ICONSIZE = parsed_users[user]["symbol-size"]
             CONSTRUCTOR.LINEWIDTH = parsed_users[user]["symbol-stroke-width"]
             CONSTRUCTOR.ICONSHAPE = parsed_users[user]["symbol-shape"]
+            CONSTRUCTOR.ICONSHAPE = CONSTRUCTOR.ICONSHAPE.lower()
             self.TEMPUSERS[str(self.usercount)] = CONSTRUCTOR
+
+
+            ##
             self.ADDUSERS.append(CONSTRUCTOR)
+            ##
             self.GEMarray[self.usercount][0] = str(CONSTRUCTOR.NAME)
             self.GEMarray[self.usercount][1] = str(CONSTRUCTOR.UID)
             self.GEMarray[self.usercount][2] = QtGui.QColor(CONSTRUCTOR.LINECOLORUI)
+            ##self.GEMarray[self.usercount][3] = QtGui.QColor(CONSTRUCTOR.ICONSHAPE)
             self.EDITORNODECOLORDISPLAY(self.usercount)
             self.pix.fill(QColor(self.TEAMNODECOLORUI))
             self.TEAMNODECOLORICON.setPixmap(self.pix)
@@ -1477,9 +1720,10 @@ class MAINWindow(QMainWindow):
             self.TEAMLINECOLORICON.setPixmap(self.pix)
             self.TEAMLINECOLORICON.repaint()
             self.usercount += 1
-            self.TABLE.resizeRowsToContents()
             self.TABLE.resizeColumnsToContents()
-            self.GETTEAMSHAPETEXT()
+            self.TABLE.resizeRowsToContents()
+            
+
 
 
     def IMPORTGO(self):
@@ -1505,12 +1749,13 @@ class MAINWindow(QMainWindow):
                     OLDSTYLE = False
                 TYPETEST = ""
         except Exception as e:
-            logger.exception(e)
+            pass
+            #logger.exception(e)
         try:
             self.IMPORT_clicked(infile_text)
         except Exception as e:
-            logger.exception(e)
-
+            #logger.exception(e)
+            pass
     def IMPORT_clicked(self, PULL):
         '''
         IMPORT_clicked calls the parsed_users function which rips the editor data from the selected Mapcss file
@@ -1526,12 +1771,8 @@ class MAINWindow(QMainWindow):
         and reflects that change in the editor table
         '''
 
-        if self.TEMPUSERS[str(count)].ICONSHAPE == "Circle":
-            '''
-            The function first determines the shape of the selected editor's node highlight,
-            then creates a new instance of that same pixmap, creates a color mask from the selected shape and color,
-            then applies the mask to the new icon, re-assigns the new node icon to the selected editor and reflects that change in the editor table
-            '''
+        if self.TEMPUSERS[str(count)].ICONSHAPE == "circle":
+
             pixmap = QtGui.QPixmap(self.CIRCLE)
             pixmap = pixmap.scaled(30, 30)
             mask = pixmap.createMaskFromColor(QColor("black"), Qt.MaskOutColor)
@@ -1540,7 +1781,7 @@ class MAINWindow(QMainWindow):
             self.TEMPUSERS[str(count)].icon = QtGui.QIcon(pixmap)
             self.GEMarray[count][3] = self.TEMPUSERS[str(count)].icon
 
-        if self.TEMPUSERS[str(count)].ICONSHAPE == "Square":
+        if self.TEMPUSERS[str(count)].ICONSHAPE == "square":
             pixmap = QtGui.QPixmap(self.SQUARE)
             pixmap = pixmap.scaled(30, 30)
             mask = pixmap.createMaskFromColor(QColor("black"), Qt.MaskOutColor)
@@ -1549,7 +1790,7 @@ class MAINWindow(QMainWindow):
             self.TEMPUSERS[str(count)].icon = QtGui.QIcon(pixmap)
             self.GEMarray[count][3] = self.TEMPUSERS[str(count)].icon
 
-        if self.TEMPUSERS[str(count)].ICONSHAPE == "Triangle":
+        if self.TEMPUSERS[str(count)].ICONSHAPE == "triangle":
             pixmap = QtGui.QPixmap(self.TRIANGLE)
             pixmap = pixmap.scaled(30, 30)
             mask = pixmap.createMaskFromColor(QColor("black"), Qt.MaskOutColor)
@@ -1558,7 +1799,7 @@ class MAINWindow(QMainWindow):
             self.TEMPUSERS[str(count)].icon = QtGui.QIcon(pixmap)
             self.GEMarray[count][3] = self.TEMPUSERS[str(count)].icon
 
-        if self.TEMPUSERS[str(count)].ICONSHAPE == "Pentagon":
+        if self.TEMPUSERS[str(count)].ICONSHAPE == "pentagon":
             pixmap = QtGui.QPixmap(self.PENTAGON)
             pixmap = pixmap.scaled(30, 30)
             mask = pixmap.createMaskFromColor(QColor("black"), Qt.MaskOutColor)
@@ -1567,7 +1808,7 @@ class MAINWindow(QMainWindow):
             self.TEMPUSERS[str(count)].icon = QtGui.QIcon(pixmap)
             self.GEMarray[count][3] = self.TEMPUSERS[str(count)].icon
 
-        if self.TEMPUSERS[str(count)].ICONSHAPE == "Hexagon":
+        if self.TEMPUSERS[str(count)].ICONSHAPE == "hexagon":
             pixmap = QtGui.QPixmap(self.HEXAGON)
             pixmap = pixmap.scaled(30, 30)
             mask = pixmap.createMaskFromColor(QColor("black"), Qt.MaskOutColor)
@@ -1576,7 +1817,7 @@ class MAINWindow(QMainWindow):
             self.TEMPUSERS[str(count)].icon = QtGui.QIcon(pixmap)
             self.GEMarray[count][3] = self.TEMPUSERS[str(count)].icon
 
-        if self.TEMPUSERS[str(count)].ICONSHAPE == "Heptagon":
+        if self.TEMPUSERS[str(count)].ICONSHAPE == "heptagon":
             pixmap = QtGui.QPixmap(self.HEPTAGON)
             pixmap = pixmap.scaled(30, 30)
             mask = pixmap.createMaskFromColor(QColor("black"), Qt.MaskOutColor)
@@ -1585,7 +1826,7 @@ class MAINWindow(QMainWindow):
             self.TEMPUSERS[str(count)].icon = QtGui.QIcon(pixmap)
             self.GEMarray[count][3] = self.TEMPUSERS[str(count)].icon
 
-        if self.TEMPUSERS[str(count)].ICONSHAPE == "Octagon":
+        if self.TEMPUSERS[str(count)].ICONSHAPE == "octagon":
             pixmap = QtGui.QPixmap(self.OCTAGON)
             pixmap = pixmap.scaled(30, 30)
             mask = pixmap.createMaskFromColor(QColor("black"), Qt.MaskOutColor)
@@ -1594,7 +1835,7 @@ class MAINWindow(QMainWindow):
             self.TEMPUSERS[str(count)].icon = QtGui.QIcon(pixmap)
             self.GEMarray[count][3] = self.TEMPUSERS[str(count)].icon
 
-        if self.TEMPUSERS[str(count)].ICONSHAPE == "Nonagon":
+        if self.TEMPUSERS[str(count)].ICONSHAPE == "nonagon":
             pixmap = QtGui.QPixmap(self.NONAGON)
             pixmap = pixmap.scaled(30, 30)
             mask = pixmap.createMaskFromColor(QColor("black"), Qt.MaskOutColor)
@@ -1604,7 +1845,7 @@ class MAINWindow(QMainWindow):
 
             self.GEMarray[count][3] = self.TEMPUSERS[str(count)].icon
 
-        if self.TEMPUSERS[str(count)].ICONSHAPE == "Decagon":
+        if self.TEMPUSERS[str(count)].ICONSHAPE == "decagon":
             pixmap = QtGui.QPixmap(self.DECAGON)
             pixmap = pixmap.scaled(30, 30)
             mask = pixmap.createMaskFromColor(QColor("black"), Qt.MaskOutColor)
@@ -1612,50 +1853,358 @@ class MAINWindow(QMainWindow):
             pixmap.setMask(mask)
             self.TEMPUSERS[str(count)].icon = QtGui.QIcon(pixmap)
             self.GEMarray[count][3] = self.TEMPUSERS[str(count)].icon
-###################################
+##################################
+class EDITORiconWindow(QMainWindow):
+    def __init__(self,SELECT):
+        QMainWindow.__init__(self)
+        self.setGeometry(650,300,225,250)
+        self.setWindowTitle("Select Node Highlight")
+        self.EDITNODEHIGHLIGHTHOME(SELECT)
+        
+    def EDITNODEHIGHLIGHTHOME(self,SELECT):
+#COL 1
 
+        circB = QPushButton(self)
+        circ = QtGui.QIcon(one.CIRCLE)
+        circB.setIcon(circ)
+        circB.resize(75,75)
+        circB.move(10,20)
+
+        circLABEL = QLabel(self)
+        circLABEL.setText("Circle")
+        circLABEL.resize(60,20)
+        circLABEL.move(30, 70)
+        circB.clicked.connect(lambda: self.CIRCLE_clicked(SELECT))
+
+        
+        triB = QPushButton(self)
+        tri  = QtGui.QIcon(one.TRIANGLE)
+        triB.setIcon(tri)
+        triB.resize(75,75)
+        triB.move(70,20)
+        triB.clicked.connect(lambda: self.TRIANGLE_clicked(SELECT))
+        triLABEL = QLabel(self)
+        triLABEL.setText("Triangle")
+        triLABEL.resize(60,20)
+        triLABEL.move(82, 70)
+
+
+        squareB = QPushButton(self)
+        square = QtGui.QIcon(one.SQUARE)
+        squareB.setIcon(square)
+        squareB.resize(75,75)
+        squareB.move(130,20)
+        squareB.clicked.connect(lambda: self.SQUARE_clicked(SELECT))
+        squareLABEL = QLabel(self)
+        squareLABEL.setText("Square")
+        squareLABEL.resize(60,20)
+        squareLABEL.move(145, 70)
+##COL 2
+
+        pentB = QPushButton(self)
+        pent  = QtGui.QIcon(one.PENTAGON)
+        pentB.setIcon(pent)
+        pentB.resize(75,75)
+        pentB.move(10,85)
+        pentB.clicked.connect(lambda: self.PENTA_clicked(SELECT))
+        pentLABEL = QLabel(self)
+        pentLABEL.setText("Pentagon")
+        pentLABEL.resize(60,20)
+        pentLABEL.move(18, 135)
+
+        
+        hexB = QPushButton(self)
+        hexagon  = QtGui.QIcon(one.HEXAGON)
+        hexB.setIcon(hexagon)
+        hexB.resize(75,75)
+        hexB.move(70,85)
+        hexB.clicked.connect(lambda: self.HEX_clicked(SELECT))
+        hexLABEL = QLabel(self)
+        hexLABEL.setText("Hexagon")
+        hexLABEL.resize(60,20)
+        hexLABEL.move(80, 135)
+
+
+        heptB = QPushButton(self)
+        heptagon = QtGui.QIcon(one.HEPTAGON)
+        heptB.setIcon(heptagon)
+        heptB.resize(75,75)
+        heptB.move(130,85)
+        heptB.clicked.connect(lambda: self.HEPTA_clicked(SELECT))
+        hepLABEL = QLabel(self)
+        hepLABEL.setText("Heptagon")
+        hepLABEL.resize(60,20)
+        hepLABEL.move(138, 135)
+##COL 3
+
+        octoB = QPushButton(self)
+        octo  = QtGui.QIcon(one.OCTAGON)
+        octoB.setIcon(octo)
+        octoB.resize(75,75)
+        octoB.move(10,150)
+        octoB.clicked.connect(lambda: self.OCTA_clicked(SELECT))
+        octoLABEL = QLabel(self)
+        octoLABEL.setText("Octagon")
+        octoLABEL.resize(60,20)
+        octoLABEL.move(22, 200)
+        
+        nonB = QPushButton(self)
+        non  = QtGui.QIcon(one.NONAGON)
+        nonB.setIcon(non)
+        nonB.resize(75,75)
+        nonB.move(70,150)
+        nonB.clicked.connect(lambda: self.NONA_clicked(SELECT))
+        nonLABEL = QLabel(self)
+        nonLABEL.setText("Nonagon")
+        nonLABEL.resize(60,20)
+        nonLABEL.move(80, 200)
+        
+        decaB = QPushButton(self)
+        deca = QtGui.QIcon(one.DECAGON)
+        decaB.setIcon(deca)
+        decaB.resize(75,75)
+        decaB.move(130,150)
+        decaB.clicked.connect(lambda: self.DECA_clicked(SELECT))
+        decaLABEL = QLabel(self)
+        decaLABEL.setText("Decagon")
+        decaLABEL.resize(60,20)
+        decaLABEL.move(140, 200)
+        
+        self.show()
+        
+   
+
+    def CIRCLE_clicked(self,SELECT):
+        if SELECT == "TEAM":
+            one.TEAMICONSHAPE = "circle"
+            shape = QtGui.QIcon(one.CIRCLE)
+            one.TEAMNODESHAPEICON.setIcon(shape)
+            one.TEAMNODESHAPEICON.repaint()            
+        else:
+            if (str(one.NRSELECT)) != '':
+                
+                one.TEMPUSERS[(str(one.NRSELECT))].ICONSHAPE = "circle"
+            else:
+                one.TEMPEDITORICONSHAPE = "circle"
+            shape = QtGui.QIcon(one.CIRCLE)
+            one.EDITORNODESHAPEICON.setIcon(shape)
+            one.EDITORNODESHAPEICON.repaint()        
+        self.close()
+
+
+        
+        
+    def TRIANGLE_clicked(self,SELECT):
+        if SELECT == "TEAM":
+            one.TEAMICONSHAPE = "triangle"
+            shape = QtGui.QIcon(one.TRIANGLE)
+            one.TEAMNODESHAPEICON.setIcon(shape)
+            one.TEAMNODESHAPEICON.repaint()            
+        else:
+            if (str(one.NRSELECT)) != '':
+                
+                one.TEMPUSERS[(str(one.NRSELECT))].ICONSHAPE = "triangle"
+            else:
+                one.TEMPEDITORICONSHAPE = "triangle"
+            shape = QtGui.QIcon(one.TRIANGLE)
+            one.EDITORNODESHAPEICON.setIcon(shape)
+            one.EDITORNODESHAPEICON.repaint()        
+        self.close()
+
+
+        
+    def SQUARE_clicked(self,SELECT):
+        if SELECT == "TEAM":
+            one.TEAMICONSHAPE = "square"
+            shape = QtGui.QIcon(one.SQUARE)
+            one.TEAMNODESHAPEICON.setIcon(shape)
+            one.TEAMNODESHAPEICON.repaint()            
+        else:
+            if (str(one.NRSELECT)) != '':
+                
+                one.TEMPUSERS[(str(one.NRSELECT))].ICONSHAPE = "square"
+            else:
+                one.TEMPEDITORICONSHAPE = "square"
+            shape = QtGui.QIcon(one.SQUARE)
+            one.EDITORNODESHAPEICON.setIcon(shape)
+            one.EDITORNODESHAPEICON.repaint()        
+        self.close()
+
+
+
+        
+###
+    def PENTA_clicked(self,SELECT):
+        if SELECT == "TEAM":
+            one.TEAMICONSHAPE = "pentagon"
+            shape = QtGui.QIcon(one.PENTAGON)
+            one.TEAMNODESHAPEICON.setIcon(shape)
+            one.TEAMNODESHAPEICON.repaint()            
+        else:
+            if (str(one.NRSELECT)) != '':
+                
+                one.TEMPUSERS[(str(one.NRSELECT))].ICONSHAPE = "pentagon"
+            else:
+                one.TEMPEDITORICONSHAPE = "pentagon"
+            shape = QtGui.QIcon(one.PENTAGON)
+            one.EDITORNODESHAPEICON.setIcon(shape)
+            one.EDITORNODESHAPEICON.repaint()        
+        self.close()
+
+
+
+        
+    def HEX_clicked(self,SELECT):
+        if SELECT == "TEAM":
+            one.TEAMICONSHAPE = "hexagon"
+            shape = QtGui.QIcon(one.HEXAGON)
+            one.TEAMNODESHAPEICON.setIcon(shape)
+            one.TEAMNODESHAPEICON.repaint()            
+        else:
+            if (str(one.NRSELECT)) != '':
+                
+                one.TEMPUSERS[(str(one.NRSELECT))].ICONSHAPE = "hexagon"
+            else:
+                one.TEMPEDITORICONSHAPE = "hexagon"
+            shape = QtGui.QIcon(one.HEXAGON)
+            one.EDITORNODESHAPEICON.setIcon(shape)
+            one.EDITORNODESHAPEICON.repaint()        
+        self.close()
+        
+        
+    def HEPTA_clicked(self,SELECT):
+        if SELECT == "TEAM":
+            one.TEAMICONSHAPE = "heptagon"
+            shape = QtGui.QIcon(one.HEPTAGON)
+            one.TEAMNODESHAPEICON.setIcon(shape)
+            one.TEAMNODESHAPEICON.repaint()            
+        else:
+            if (str(one.NRSELECT)) != '':
+                
+                one.TEMPUSERS[(str(one.NRSELECT))].ICONSHAPE = "heptagon"
+            else:
+                one.TEMPEDITORICONSHAPE = "heptagon"
+            shape = QtGui.QIcon(one.HEPTAGON)
+            one.EDITORNODESHAPEICON.setIcon(shape)
+            one.EDITORNODESHAPEICON.repaint()        
+        self.close()
+
+        
+ ##
+    def OCTA_clicked(self,SELECT):
+        if SELECT == "TEAM":
+            one.TEAMICONSHAPE = "octagon"
+            shape = QtGui.QIcon(one.OCTAGON)
+            one.TEAMNODESHAPEICON.setIcon(shape)
+            one.TEAMNODESHAPEICON.repaint()            
+        else:
+            if (str(one.NRSELECT)) != '':
+                
+                one.TEMPUSERS[(str(one.NRSELECT))].ICONSHAPE = "octagon"
+            else:
+                one.TEMPEDITORICONSHAPE = "octagon"
+            shape = QtGui.QIcon(one.OCTAGON)
+            one.EDITORNODESHAPEICON.setIcon(shape)
+            one.EDITORNODESHAPEICON.repaint()        
+        self.close()
+
+        
+        
+    def NONA_clicked(self,SELECT):
+        if SELECT == "TEAM":
+            one.TEAMICONSHAPE = "nonagon"
+            shape = QtGui.QIcon(one.NONAGON)
+            one.TEAMNODESHAPEICON.setIcon(shape)
+            one.TEAMNODESHAPEICON.repaint()            
+        else:
+            if (str(one.NRSELECT)) != '':
+                
+                one.TEMPUSERS[(str(one.NRSELECT))].ICONSHAPE = "nonagon"
+            else:
+                one.TEMPEDITORICONSHAPE = "nonagon"
+            shape = QtGui.QIcon(one.NONAGON)
+            one.EDITORNODESHAPEICON.setIcon(shape)
+            one.EDITORNODESHAPEICON.repaint()        
+        self.close()
+        
+    def DECA_clicked(self,SELECT):
+        if SELECT == "TEAM":
+            one.TEAMICONSHAPE = "decagon"
+            shape = QtGui.QIcon(one.DECAGON)
+            one.TEAMNODESHAPEICON.setIcon(shape)
+            one.TEAMNODESHAPEICON.repaint()            
+        else:
+            if (str(one.NRSELECT)) != '':
+                
+                one.TEMPUSERS[(str(one.NRSELECT))].ICONSHAPE = "decagon"
+            else:
+                one.TEMPEDITORICONSHAPE = "decagon"
+            shape = QtGui.QIcon(one.DECAGON)
+            one.EDITORNODESHAPEICON.setIcon(shape)
+            one.EDITORNODESHAPEICON.repaint()        
+        self.close()
+            
+###################################
+def main(args):
+        app = QtWidgets.QApplication(args)
+        global one
+        one =MAINWindow ()
+        one.show()
+        sys.exit(app.exec_())
+        if self.EXIT == 1:
+            sys.exit(0)
+        sys._excepthook = sys.excepthook
+        
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback) 
+    sys.exit(1) 
+sys.excepthook = exception_hook
+
+while  True:
+    main(sys.argv) 
 
             
 
 # ################################   MAIN LOOP   ########################### #
-def main(args):
-    parser = argparse.ArgumentParser(description="Modify MapCSS files for QC purposes")
-    parser.add_argument(
-        "--test", action="store_true", required=False, help="Run doctests"
-    )
-    parser.add_argument(
-        "-f", "--file", required=False, help="A file to open the program with"
-    )
-    parsed_args = parser.parse_args()
-    if parsed_args.test:
-        import doctest
-
-        doctest.testmod()
-    else:
-        app = QtWidgets.QApplication(args)
-        global one
-        one = MAINWindow()
-        one.show()
-        if parsed_args.file is not None:
-            mapcss_file = parsed_args.file
-            if isinstance(mapcss_file, str):
-                mapcss_file = [mapcss_file]
-            for mfile in mapcss_file:
-                with open(mfile, "r") as f:
-                    one.IMPORT_clicked(f.read())
-        sys.exit(app.exec_())
-        sys._excepthook = sys.excepthook
-        sys.excepthook = exception_hook
-
-
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    try:
-        sys._excepthook(exctype, value, traceback)
-    except Exception as error:
-        logger.exception(error)
-    sys.exit(1)
-
-
-if __name__ == "__main__":
-    main(sys.argv)
+##def main(args):
+##    parser = argparse.ArgumentParser(description="Modify MapCSS files for QC purposes")
+##    parser.add_argument(
+##        "--test", action="store_true", required=False, help="Run doctests"
+##    )
+##    parser.add_argument(
+##        "-f", "--file", required=False, help="A file to open the program with"
+##    )
+##    parsed_args = parser.parse_args()
+##    if parsed_args.test:
+##        import doctest
+##
+##        doctest.testmod()
+##    else:
+##        app = QtWidgets.QApplication(args)
+##        global one
+##        one = MAINWindow()
+##        one.show()
+##        if parsed_args.file is not None:
+##            mapcss_file = parsed_args.file
+##            if isinstance(mapcss_file, str):
+##                mapcss_file = [mapcss_file]
+##            for mfile in mapcss_file:
+##                with open(mfile, "r") as f:
+##                    one.IMPORT_clicked(f.read())
+##        sys.exit(app.exec_())
+##        sys._excepthook = sys.excepthook
+##        sys.excepthook = exception_hook
+##
+##
+##def exception_hook(exctype, value, traceback):
+##    print(exctype, value, traceback)
+##    try:
+##        sys._excepthook(exctype, value, traceback)
+##    except Exception as error:
+##        logger.exception(error)
+##    sys.exit(1)
+##
+##
+##if __name__ == "__main__":
+##    main(sys.argv)
